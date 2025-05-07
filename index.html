@@ -101,7 +101,7 @@
         </p>
 
         <p class="item">
-            The input to the embedding layer can be a tensor of any shape, as long as its entries are integers no bigger than the number of rows in the embedding table. The embedding layer replaces each integer in its input with its corresponding row from the embedding table. Thus, the shape of the output has one extra dimension of size \(H\). Let’s look at an example. Suppose the vocabulary has size 8, the embedding layer is initialized with \(H=9\), and stores the following embedding table:
+            The input to the embedding layer can be a tensor of any shape, as long as its entries are integers no bigger than the number of rows in the embedding table. The embedding layer replaces each integer in its input with its corresponding row from the embedding table. Thus, the shape of the output gains one extra dimension of size \(H\). Let’s look at an example. Suppose the vocabulary has size 8, the embedding layer is initialized with \(H=9\), and stores the following embedding table:
         </p>
 
         <p class="item">
@@ -229,7 +229,7 @@ tensor([[ 0.12, -0.76,  1.34,  0.58, -1.21,  0.44, -0.09,  0.72, -0.33],
         creating queries, keys and values">
 
         <p class="item">
-            We are using the fact that matrix multiplication computes the dot products between the rows of \(Q\) and colums \(K^T\), which is exactly what we want. After letting \(A = \text{softmax}(E/D_k, \text{dim}=1)\), all of the weighted summations are computed 
+            We are using the fact that matrix multiplication computes the dot products between the rows of \(Q\) and colums of \(K^T\), which is exactly what we want. After letting \(A = \text{softmax}(E/D_k, \text{dim}=1)\), all of the weighted summations are computed 
         </p>
 
         <img class="item" src="images/sum_values.png" alt="a visualization of 
@@ -296,14 +296,14 @@ class MultiHeadAttention(nn.Module):
             The first \(D_k\) columns of \(Q\) and \(K\) correspond to the first attention head, the next \(D_k\) columns to the second, and so on. The function slice_vertically() is used to chop up \(Q\) and \(K\) every \(D_k\) columns. The same occurs for the values, except every \(D_v\) columns instead. Lines 24 and 26 then compute the single head attentions. The function unslice_vertically() concatenates the resulting attention heads, which are then multiplied by \(W^O\). 
         </p>
         <p class="item">
-            Below is an example of this process, which uses 4 attention heads, and where \(D_v\) just happens to be equal to \(D_k\) so that the diagram is nicer. 
+            Below is an example visualization of this process, which uses 4 attention heads, and where \(D_v\) just happens to be equal to \(D_k\) so that the diagram is nicer. 
         </p>
 
         <img class="item" src="images/multihead_attention.png" alt="a visualization of 
         multi head attention">
 
         <p class="item">
-            Below is the code for the functions involved:
+            The code for the functions used in the forward method is shown below:
         </p>
         <pre class="line-numbers item" style="font-size: 0.70em;"><code class="language-python"># Code
 """
@@ -428,7 +428,7 @@ class EncoderLayer(nn.Module):
             <li>like classic reading I novels,</li>            
         </ol>
         <p class="item">
-            get the same feature representations, regardless of how which permutation is passed into the encoder. Only the order of the output sequence changes. 
+            get the same feature representations, regardless of which permutation is passed into the encoder. Only the order of the output sequence changes. 
         </p>
 
         <p class="item">
