@@ -1,0 +1,39 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.item {
+    width: 650px
+}
+
+p {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+h {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+html {
+    scroll-behavior: smooth;
+  }
+  #toc {
+    /* position: fixed; */
+    top: 10px;
+    left: 10px;
+    /* background: #f9f9f9; */
+    padding: 1em;
+    border-radius: 8px;
+    /* max-width: 250px; */
+  }
+  #toc ul {
+    list-style-type: none;
+    padding-left: 1em;
+  }
+  #toc li {
+    margin-bottom: 5px;
+  }
