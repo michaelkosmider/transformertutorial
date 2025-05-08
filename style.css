@@ -154,6 +154,15 @@ body {
   text-decoration: underline;
 }
 
+.math-scrollable {
+  overflow-x: auto;   /* Add horizontal scrollbar if content overflows */
+  overflow-y: hidden; /* Optional: hide vertical scrollbar if not needed,
+                         though MathJax usually doesn't overflow vertically much */
+  max-width: 100%;    /* Ensure the div itself doesn't overflow its parent */
+  padding-bottom: 10px; /* Optional: Add some space for the scrollbar so it
+                           doesn't overlap content too much, or to give visual breathing room */
+  -webkit-overflow-scrolling: touch; /* For smoother scrolling on iOS devices */
+}
 /* Responsive Adjustments */
 
 /* Tablets and smaller desktops */
@@ -202,8 +211,8 @@ body {
       text-align: left; /* Left-align text on small screens as justify can look gappy */
   }
   .image-placeholder {
-      height: 200px; /* Adjust placeholder height for smaller screens */
-      font-size: 0.9em;
+    width: 100%;
+    height: auto;
   }
 }
 
