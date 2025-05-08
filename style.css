@@ -1,39 +1,223 @@
-.container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.item {
-    width: 650px
-}
-
-p {
-    margin-top: 5px;
-    margin-bottom: 5px;
-}
-
-h {
-    margin-top: 5px;
-    margin-bottom: 5px;
+/* Basic Reset & Global Styles */
+* {
+  box-sizing: border-box;
+  /* margin: 0;
+  padding: 0; */
 }
 
 html {
-    scroll-behavior: smooth;
+  scroll-behavior: smooth; /* For smooth scrolling from TOC */
+}
+
+body {
+  font-family: 'Roboto', sans-serif;
+  line-height: 1.7;
+  color: #333;
+  background-color: #f8f9fa; /* Light grey background for contrast */
+  padding: 20px 0; /* Add some padding so container doesn't touch screen edges on mobile */
+}
+
+.container {
+  max-width: 900px; /* Reasonably sized width */
+  margin: 0 auto; /* Center the content */
+  background-color: #ffffff; /* White background for the content area */
+  padding: 30px 40px;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Header Styles */
+.tutorial-header {
+  text-align: center;
+  margin-bottom: 40px;
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 20px;
+}
+
+.tutorial-header h1 {
+  font-family: 'Roboto Slab', serif;
+  font-size: 2.8em;
+  color: #2c3e50; /* Dark blue-grey */
+  margin-bottom: 10px;
+}
+
+.tutorial-header .author-date {
+  font-size: 0.95em;
+  color: #6c757d; /* Muted grey */
+  font-style: italic;
+}
+
+/* Table of Contents Styles */
+.toc {
+  background-color: #eef2f7; /* Light blue-ish grey background */
+  padding: 20px;
+  margin-bottom: 40px;
+  border-radius: 6px;
+  border-left: 5px solid #007bff; /* Accent color */
+}
+
+.toc h2 {
+  font-family: 'Roboto Slab', serif;
+  font-size: 1.6em;
+  color: #343a40;
+  margin-bottom: 15px;
+}
+
+.toc ul {
+  list-style-type: none; /* Remove default bullets */
+  padding-left: 0;
+}
+
+.toc ul ul {
+  padding-left: 25px; /* Indent subsections */
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+.toc li {
+  margin-bottom: 8px;
+}
+
+.toc a {
+  text-decoration: none;
+  color: #0056b3; /* Darker blue for links */
+  font-weight: 400;
+  transition: color 0.2s ease-in-out;
+}
+
+.toc a:hover {
+  color: #007bff; /* Brighter blue on hover */
+  text-decoration: underline;
+}
+
+/* Main Content Styles */
+.tutorial-content section {
+  margin-bottom: 50px;
+}
+
+.tutorial-content h2 {
+  font-family: 'Roboto Slab', serif;
+  font-size: 2.2em;
+  color: #2c3e50;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #dee2e6; /* Light border under section titles */
+}
+
+.tutorial-content h3 {
+  font-family: 'Roboto Slab', serif;
+  font-size: 1.8em;
+  color: #34495e; /* Slightly lighter than h2 */
+  margin-top: 30px; /* More space above subsection titles */
+  margin-bottom: 15px;
+}
+
+.tutorial-content p {
+  font-size: 1.05em;
+  /* margin-bottom: 20px; */
+  color: #151718; /* Dark grey for text */
+  text-align: justify; /* Justify text for a cleaner block look */
+}
+
+/* Image Placeholder Styles */
+.image-placeholder {
+  width: 100%;
+  height: auto; /* Adjust as needed, or use aspect-ratio */
+  background-color: #e9ecef; /* Light grey background */
+  /* border: 2px dashed #ced4da; Dashed border */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 25px auto; /* Center block elements and add vertical space */
+  font-size: 1em;
+  color: #6c757d;
+  text-align: center;
+  /* padding: 20px; */
+  /* border-radius: 4px; */
+}
+
+/* Footer Styles */
+.tutorial-footer {
+  text-align: center;
+  margin-top: 50px;
+  padding-top: 20px;
+  border-top: 1px solid #e9ecef;
+  font-size: 0.9em;
+  color: #6c757d;
+}
+
+.tutorial-footer a {
+  color: #0056b3;
+  text-decoration: none;
+}
+.tutorial-footer a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive Adjustments */
+
+/* Tablets and smaller desktops */
+@media (max-width: 992px) {
+  .container {
+      padding: 25px 30px;
   }
-  #toc {
-    /* position: fixed; */
-    top: 10px;
-    left: 10px;
-    /* background: #f9f9f9; */
-    padding: 1em;
-    border-radius: 8px;
-    /* max-width: 250px; */
+  .tutorial-header h1 {
+      font-size: 2.5em;
   }
-  #toc ul {
-    list-style-type: none;
-    padding-left: 1em;
+  .tutorial-content h2 {
+      font-size: 2em;
   }
-  #toc li {
-    margin-bottom: 5px;
+  .tutorial-content h3 {
+      font-size: 1.6em;
   }
+}
+
+/* Mobile devices */
+@media (max-width: 768px) {
+  body {
+      padding: 10px 0; /* Reduce body padding */
+  }
+  .container {
+      margin: 0 10px; /* Allow container to be closer to screen edges */
+      padding: 20px;
+      width: auto; /* Allow container to fill available width minus margins */
+  }
+  .tutorial-header h1 {
+      font-size: 2em;
+  }
+  .tutorial-header .author-date {
+      font-size: 0.9em;
+  }
+  .toc h2 {
+      font-size: 1.4em;
+  }
+  .tutorial-content h2 {
+      font-size: 1.8em;
+  }
+  .tutorial-content h3 {
+      font-size: 1.5em;
+  }
+  .tutorial-content p {
+      font-size: 1em;
+      text-align: left; /* Left-align text on small screens as justify can look gappy */
+  }
+  .image-placeholder {
+      height: 200px; /* Adjust placeholder height for smaller screens */
+      font-size: 0.9em;
+  }
+}
+
+@media (max-width: 480px) {
+  .tutorial-header h1 {
+      font-size: 1.7em;
+  }
+   .tutorial-content h2 {
+      font-size: 1.5em;
+  }
+  .tutorial-content h3 {
+      font-size: 1.3em;
+  }
+  .toc ul ul {
+      padding-left: 15px; /* Reduce subsection indent */
+  }
+}

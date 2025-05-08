@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transformer Tutorial</title>
+    <title>Understanding Transformers: A Tutorial</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" />
   
@@ -13,242 +15,247 @@
     </script>
 </head>
 <body>
+    <div class="container">
+        <header class="tutorial-header">
+            <h1>Transformer Tutorial with PyTorch (Part 1)</h1>
+            <p class="author-date">Author: Michael Kosmider | Published: May 7, 2025</p>
+        </header>
 
-    <div class="container"> 
-        <header class="item">
-            <p>
-              <strong>Author:</strong> Michael Kosmider<br>
-              <strong>Published on:</strong> <time datetime="2025-05-07">May 7, 2025</time>
-            </p>
-          </header>
-        <div id="toc" class="item">
-            <h3>Table of Contents</h3>
+        <nav class="toc">
+            <h2>Table of Contents</h2>
             <ul>
-              <li><a href="#section1">The Big Picture</a></li>
-              <li><a href="#section2">Definition</a></li>
-              <li><a href="#section3">Word Embeddings</a></li>
-              <li>
-                <a href="#section4">The Transformer Encoder</a>
-                <ul>
-                  <li><a href="#section4-1">The Single Head Attention Layer</a></li>
-                  <li><a href="#section4-2">The Multi Head Attention Layer</a></li>
-                  <li><a href="#section4-3">Full Encoder</a></li>
-                </ul>
-              </li>
-              <li><a href="#section5">Part 1 Conclusion</a></li>
-        </div>
-        <h1 class="item">Transformer Tutorial with Pytorch (Part 1)</h1>
+                <li><a href="#big-picture">The Big Picture</a></li>
+                <li><a href="#definition">Definition</a></li>
+                <li><a href="#word-embeddings">Word Embeddings</a></li>
+                <li><a href="#transformer-encoder">The Transformer Encoder</a>
+                    <ul>
+                        <li><a href="#single-head-attention">The Single Head Attention Layer</a></li>
+                        <li><a href="#multi-head-attention">The Multi Head Attention Layer</a></li>
+                        <li><a href="#full-encoder">Full Encoder</a></li>
+                    </ul>
+                </li>
+                <li><a href="#part-1-conclusion">Part 1 Conclusion</a></li>
+            </ul>
+        </nav>
 
-        <p class="item">
-            In this tutorial, you will learn both the theory and implementation of the transformer from the paper "Attention is All You Need". Then, you will see how to train such a model on machine translation from English to French. This tutorial assumes that the reader understands deep learning fundamentals and has experience training models in PyTorch. 
-        </p>
+        <main class="tutorial-content">
 
-        <p class="item">
-            Part 1 will cover the implementation of the transformer encoder, which is the part of the model responsible for creating a rich representation of the input sentence. This representation is used by the transformer decoder when generating the French version of the sentence. Part 2 will discuss the decoder and model training. Finally, Part 3 discusses techniques and optimizations used in inference such as beam search and KV caching. Parts 2 and 3 are coming soon.
-        </p>
+            <p class="item">
+                In this tutorial, you will learn both the theory and implementation of the transformer from the paper "Attention is All You Need". Then, you will see how to train such a model on machine translation from English to French. This tutorial assumes that the reader understands deep learning fundamentals and has experience training models in PyTorch. 
+            </p>
 
-        <h2 class="item" id="section1">The Big Picture</h2>
+            <p class="item">
+                Part 1 will cover the implementation of the transformer encoder, which is the part of the model responsible for creating a rich representation of the input sentence. This representation is used by the transformer decoder when generating the French version of the sentence. Part 2 will discuss the decoder and model training. Finally, Part 3 discusses techniques and optimizations used in inference such as beam search and KV caching. Parts 2 and 3 are coming soon.
+            </p>
+    
+            <section id="big-picture">
+                <h2>The Big Picture</h2>
+                <p class="item">
+                    Let us recall how a multilayer perceptron works. It accepts a single input, such as an image in vector form. The input then passes through a number of “layers”, where each layer outputs a new representation of its input. By the end, a final representation is obtained, and this final representation can be used for tasks such as classification.
+                </p>
 
-        <p class="item">
-            Let us recall how a multilayer perceptron works. It accepts a single input, such as an image in vector form. The input then passes through a number of “layers”, where each layer outputs a new representation of its input. By the end, a final representation is obtained, and this final representation can be used for tasks such as classification.
-        </p>
+                <p class="item">
+                    The transformer differs from an MLP in that it accepts a sequence of inputs instead of a single input. Transformers are part of a class of deep learning models called sequential models. 
+                </p>
 
-        <p class="item">
-            The transformer differs from an MLP in that it accepts a sequence of inputs instead of a single input. Transformers are part of a class of deep learning models called sequential models. 
-        </p>
+                <p class="item">
+                    While an MLP gives its single input a new representation, a transformer does so for each element in its input sequence. Furthermore, the new representation of each element depends on what other elements are in the sequence. To illustrate this point, consider the two sentences:
+                </p>
 
-        <p class="item">
-            While an MLP gives its single input a new representation, a transformer does so for each element in its input sequence. Furthermore, the new representation of each element depends on what other elements are in the sequence. To illustrate this point, consider the two sentences:
-        </p>
+                <ol class="item">
+                    <li>I am writing a novel this year.</li>
+                    <li>The rollercoaster is a novel experience. </li>            
+                </ol>
 
-        <ol class="item">
-            <li>I am writing a novel this year.</li>
-            <li>The rollercoaster is a novel experience. </li>            
-        </ol>
+                <p class="item">
+                    A transformer is likely to give the word “novel” a different representation depending on which of the two sequences is passed in, because the meaning of “novel” changes depending on its surrounding words. The mechanism that allows surrounding elements to be factored in is called attention, and it is a key concept to understand in the study of transformers.
+                </p>
+            </section>
 
-        <p class="item">
-            A transformer is likely to give the word “novel” a different representation depending on which of the two sequences is passed in, because the meaning of “novel” changes depending on its surrounding words. The mechanism that allows surrounding elements to be factored in is called attention, and it is a key concept to understand in the study of transformers.
-        </p>
+            <section id="definition">
+                <h2 class="item" id="section2">Definition</h2>
+                <p class="item">
+                    Before discussing the inner workings of transformers, we will formally define the problem. Our training data is a large set of pairs of sentences, where each pair contains the English  and French versions of a sentence. Our goal is to create and train a model that can take any English sentence as input and produce its French translation as output. This model is going to consist of an embedding layer, a transformer encoder, and a transformer decoder.
+                </p>
+        
+                <p class="item">
+                    In order to pass in English sentences as input to the model, we will employ the following strategy:
+                </p>
+        
+                <ol class="item">
+                    <li>Define the English vocabulary to be the set of all English words in the training data.</li>
+                    <li>Randomly assign to each word in the vocabulary a unique positive integer between 0 and the size of the vocabulary.</li>            
+                </ol>
+        
+                <p class="item">
+                    For example, the sentence “I like cats” might become the sequence \( \left[ \begin{array}{ccc} 132 & 84 & 552 \end{array} \right] \). While this will be our approach, note that there are other ways to encode sentences as sequences. For example, they can be treated
+                    as sequences of characters.
+                </p>
+        
+                <p class="item">
+                    The same process is done for the French vocabulary, and the output of the model will be a sequence of integers representing French words.
+                </p>
+            </section>
 
-        <h2 class="item" id="section2">Definition</h2>
+            <section id="word-embeddings">
+                <h2 class="item">Word Embeddings</h2>
+                <p class="item">
+                    The first layer in our model is the embedding layer. It has a learnable parameter called the “embedding table”, which is a two dimensional tensor. The number of columns in the table is a hyper-parameter \(H\), and we will set the number of rows to be the number of words in our English vocabulary. 
+                </p>
+        
+                <p class="item">
+                    The input to the embedding layer can be a tensor of any shape, as long as its entries are integers no bigger than the number of rows in the embedding table. The embedding layer replaces each integer in its input with its corresponding row from the embedding table. Thus, the shape of the output gains one extra dimension of size \(H\). Let’s look at an example. Suppose the vocabulary has size 8, the embedding layer is initialized with \(H=9\), and stores the following embedding table:
+                </p>
+        
+                <p class="item">
+                    \[
+                    \begin{bmatrix}
+                      0.12 & -0.76 & 1.34 & 0.58 & -1.21 & 0.44 & -0.09 & 0.72 & -0.33 \\
+                      -0.45 & 1.05 & 0.39 & -0.97 & 0.18 & -1.56 & 0.87 & 0.23 & -0.12 \\
+                      1.23 & -0.64 & 0.07 & 0.92 & -0.31 & 0.51 & -1.22 & 0.84 & -0.77 \\
+                      -0.19 & 0.34 & 0.88 & -1.03 & 1.15 & -0.42 & 0.65 & -0.91 & 0.00 \\
+                      0.48 & -1.14 & 0.26 & 0.71 & -0.53 & 1.38 & -0.66 & 0.97 & -0.28 \\
+                      0.16 & 0.62 & -0.85 & 1.04 & -0.11 & -0.76 & 0.89 & -1.34 & 0.43 \\
+                      -0.58 & 1.11 & 0.30 & -0.69 & 0.93 & -0.37 & -1.05 & 0.57 & 0.22 \\
+                      0.35 & -0.99 & 0.79 & 0.18 & -0.82 & 1.20 & -0.48 & 0.61 & -0.13
+                    \end{bmatrix}
+                    \]
+                </p>
+        
+                <p class="item">
+                    Then this layer would map&nbsp \( \left[ \begin{array}{ccc} 0 & 6 & 4 \end{array} \right] \) &nbspto 
+                    \[
+                    \begin{bmatrix}
+                    0.12 & -0.76 & 1.34 & 0.58 & -1.21 & 0.44 & -0.09 & 0.72 & -0.33 \\
+                    -0.58 & 1.11 & 0.30 & -0.69 & 0.93 & -0.37 & -1.05 & 0.57 & 0.22 \\
+                    0.48 & -1.14 & 0.26 & 0.71 & -0.53 & 1.38 & -0.66 & 0.97 & -0.28 
+                    \end{bmatrix}
+                    \]
+                </p>
+        
+                <p class="item">
+                    While the input to the embedding layer can be of any shape, we care that it can map sequences of integers to sequences of vectors. Below is the code for the above example:
+                </p>
+        
+                <pre class="line-numbers item" style="font-size: 0.70em;"><code class="language-python"># Code
+        # The matrix stored by the embedding layer.
+        embedding_weights = torch.tensor([
+            [ 0.12, -0.76,  1.34,  0.58, -1.21,  0.44, -0.09,  0.72, -0.33],
+            [-0.45,  1.05,  0.39, -0.97,  0.18, -1.56,  0.87,  0.23, -0.12],
+            [ 1.23, -0.64,  0.07,  0.92, -0.31,  0.51, -1.22,  0.84, -0.77],
+            [-0.19,  0.34,  0.88, -1.03,  1.15, -0.42,  0.65, -0.91,  0.00],
+            [ 0.48, -1.14,  0.26,  0.71, -0.53,  1.38, -0.66,  0.97, -0.28],
+            [ 0.16,  0.62, -0.85,  1.04, -0.11, -0.76,  0.89, -1.34,  0.43],
+            [-0.58,  1.11,  0.30, -0.69,  0.93, -0.37, -1.05,  0.57,  0.22],
+            [ 0.35, -0.99,  0.79,  0.18, -0.82,  1.20, -0.48,  0.61, -0.13]
+        ], dtype=torch.float)
+        
+        # Initializing the embedding layer with the matrix above.
+        embedding_layer = nn.Embedding(num_embeddings = 8, embedding_dim = 9)
+        embedding_layer.weight.data = embedding_weights
+        
+        # Example of above sequence input to embedding layer.
+        input = torch.tensor([0,6,4])
+        output = embedding_layer(input)
+        
+        torch.set_printoptions(precision=2)
+        print(output)</code></pre>
+        
+                <pre class="line-numbers item" style="font-size: 0.70em;"><code class="language-python"># Output
+        tensor([[ 0.12, -0.76,  1.34,  0.58, -1.21,  0.44, -0.09,  0.72, -0.33],
+                [-0.58,  1.11,  0.30, -0.69,  0.93, -0.37, -1.05,  0.57,  0.22],
+                [ 0.48, -1.14,  0.26,  0.71, -0.53,  1.38, -0.66,  0.97, -0.28]],
+                grad_fn=&ltEmbeddingBackward0&gt)</code></pre>
+        
+                <p class="item">
+                    Here’s a quick recap. In order for us to pass in sentences  as sequences into our model, each word in the vocabulary is assigned a unique integer between 0 and the size of the vocabulary. The initial representation (also called the embedding) of the word \(i\) is the \(i\)’th row of the embedding table. The embedding layer takes a sequence of integers, and outputs a sequence of embeddings.
+                </p>
+            </section>
 
-        <p class="item">
-            Before discussing the inner workings of transformers, we will formally define the problem. Our training data is a large set of pairs of sentences, where each pair contains the English  and French versions of a sentence. Our goal is to create and train a model that can take any English sentence as input and produce its French translation as output. This model is going to consist of an embedding layer, a transformer encoder, and a transformer decoder.
-        </p>
+            <section id="transformer-encoder">
+                <h2>The Transformer Encoder</h2>
+                <p class="item"> 
+                    The job of the transformer encoder is to accept as input the sequence of word embeddings produced by the embedding layer, and to give each embedding in the sequence a new, better representation. This new representation will depend not only on the embedding itself, but also on all other embeddings in the sequence.
+                </p>
+        
+                <p class="item"> 
+                    As described in the paper, the encoder consists of N identical layers, each of which
+                    consists of 2 sublayers: the multi head attention layer, and a feedforward layer. 
+                    In this section we will discuss both sublayers in detail.
+                </p>
 
-        <p class="item">
-            In order to pass in English sentences as input to the model, we will employ the following strategy:
-        </p>
+                <section id="single-head-attention">
+                    <h3>The Single Head Attention Layer</h3>
+                    <p class="item"> 
+                        Before talking about multi head attention, we must first understand single head attention. Thus we will first discuss what a single head attention layer looks like. The input to the single head attention layer is a tensor \(X \in \mathbb{R}^{T \times H}\), which represents a sequence of length \(T\) of word embeddings of size \(H\). The purpose of this layer is to map each word embedding \(X_i\) to a new representation \(Y_i\). The output of this layer is thus a tensor \(Y \in \mathbb{R}^{T \times H}\). We will  see that \(Y_i\) is a function of all the word embeddings in \(X\), and not just \(X_i\) alone. This is what allows the new representation of each word to factor in the "context" of the sentence that the word is in.
+                    </p>
 
-        <ol class="item">
-            <li>Define the English vocabulary to be the set of all English words in the training data.</li>
-            <li>Randomly assign to each word in the vocabulary a unique positive integer between 0 and the size of the vocabulary.</li>            
-        </ol>
+                    <p class="item">
+                        The learnable parameters of this layer are tensors \(W^Q, W^K \in \mathbb{R}^{H \times D_k}, \text{ and } W^V \in \mathbb{R}^{H \times D_v}\). Here, \(D_k \text{ and } D_v\) are hyper-parameters to the layer, and notice that \(W^Q\) and \(W^K\) are the same shape. For this section we'll let \(D_v = H\), and the reason for this will become clear in the section on multihead attention.
+                    </p>
 
-        <p class="item">
-            For example, the sentence “I like cats” might become the sequence \( \left[ \begin{array}{ccc} 132 & 84 & 552 \end{array} \right] \). While this will be our approach, note that there are other ways to encode sentences as sequences. For example, they can be treated
-            as sequences of characters.
-        </p>
+                    <p class="item">
+                        Upon recieving the input \(X\), the single head attention layer computes three new matrices:
+                        \[\begin{equation}
+                        \begin{aligned}
+                        Q &= X \times W^Q,\\
+                        K &= X \times W^K, \text{ and }\\
+                        V &= X \times W^V.
+                        \end{aligned}
+                        \end{equation}\]
+                        Notice that \(Q,\; K, \text{ and } V\) each have the same number of rows as \(X\). You can think of each \(X_i\) as now having three new representations \(Q_i,\; K_i, \text{ and } V_i\), which are commonly known as the query, key, and value of \(X_i\). A visual depiction is provided below. 
+                    </p>
 
-        <p class="item">
-            The same process is done for the French vocabulary, and the output of the model will be a sequence of integers representing French words.
-        </p>
+                    <img class="image-placeholder" src="images/createqkv.png" alt="a visualization of 
+                    creating queries, keys and values">
 
-        <h2 class="item" id="section3">Word Embeddings</h2>
+                    <p class="item">
+                        The new feature representation of \(X_i\) (aka \(Y_i\)) is going to be a weighted sum of the rows in \(V,\) and the number \(Q_i \cdot K_j\) is used to determine the contribution of row \(V_j\) to this sum. This number is the query of \(X_i\) dotted with the key of \(X_j\). Let's look at how this happens.
+                    </p>
 
-        <p class="item">
-            The first layer in our model is the embedding layer. It has a learnable parameter called the “embedding table”, which is a two dimensional tensor. The number of columns in the table is a hyper-parameter \(H\), and we will set the number of rows to be the number of words in our English vocabulary. 
-        </p>
+                    <p class="item">
+                        For each embedding \(X_i\) we define the vector \(E_i \in \mathbb{R} ^ T\), where \(E_{ij} = Q_i \cdot K_j\). Next we define \(A_i = \text{softmax}(E_i/D_k)\), where the division by \(D_K\) is element-wise. Finally, we let \[ Y_i = \sum_{j=1}^{T} a_{ij} \cdot V_j,\]
+                    </p>
 
-        <p class="item">
-            The input to the embedding layer can be a tensor of any shape, as long as its entries are integers no bigger than the number of rows in the embedding table. The embedding layer replaces each integer in its input with its corresponding row from the embedding table. Thus, the shape of the output gains one extra dimension of size \(H\). Let’s look at an example. Suppose the vocabulary has size 8, the embedding layer is initialized with \(H=9\), and stores the following embedding table:
-        </p>
+                    <p class="item"> 
+                        where \(a_{ij}\) is the \(j\)th element of \(A_i\). 
+                    </p>
 
-        <p class="item">
-            \[
-            \begin{bmatrix}
-              0.12 & -0.76 & 1.34 & 0.58 & -1.21 & 0.44 & -0.09 & 0.72 & -0.33 \\
-              -0.45 & 1.05 & 0.39 & -0.97 & 0.18 & -1.56 & 0.87 & 0.23 & -0.12 \\
-              1.23 & -0.64 & 0.07 & 0.92 & -0.31 & 0.51 & -1.22 & 0.84 & -0.77 \\
-              -0.19 & 0.34 & 0.88 & -1.03 & 1.15 & -0.42 & 0.65 & -0.91 & 0.00 \\
-              0.48 & -1.14 & 0.26 & 0.71 & -0.53 & 1.38 & -0.66 & 0.97 & -0.28 \\
-              0.16 & 0.62 & -0.85 & 1.04 & -0.11 & -0.76 & 0.89 & -1.34 & 0.43 \\
-              -0.58 & 1.11 & 0.30 & -0.69 & 0.93 & -0.37 & -1.05 & 0.57 & 0.22 \\
-              0.35 & -0.99 & 0.79 & 0.18 & -0.82 & 1.20 & -0.48 & 0.61 & -0.13
-            \end{bmatrix}
-            \]
-        </p>
-
-        <p class="item">
-            Then this layer would map&nbsp \( \left[ \begin{array}{ccc} 0 & 6 & 4 \end{array} \right] \) &nbspto 
-            \[
-            \begin{bmatrix}
-            0.12 & -0.76 & 1.34 & 0.58 & -1.21 & 0.44 & -0.09 & 0.72 & -0.33 \\
-            -0.58 & 1.11 & 0.30 & -0.69 & 0.93 & -0.37 & -1.05 & 0.57 & 0.22 \\
-            0.48 & -1.14 & 0.26 & 0.71 & -0.53 & 1.38 & -0.66 & 0.97 & -0.28 
-            \end{bmatrix}
-            \]
-        </p>
-
-        <p class="item">
-            While the input to the embedding layer can be of any shape, we care that it can map sequences of integers to sequences of vectors. Below is the code for the above example:
-        </p>
-
-        <pre class="line-numbers item" style="font-size: 0.70em;"><code class="language-python"># Code
-# The matrix stored by the embedding layer.
-embedding_weights = torch.tensor([
-    [ 0.12, -0.76,  1.34,  0.58, -1.21,  0.44, -0.09,  0.72, -0.33],
-    [-0.45,  1.05,  0.39, -0.97,  0.18, -1.56,  0.87,  0.23, -0.12],
-    [ 1.23, -0.64,  0.07,  0.92, -0.31,  0.51, -1.22,  0.84, -0.77],
-    [-0.19,  0.34,  0.88, -1.03,  1.15, -0.42,  0.65, -0.91,  0.00],
-    [ 0.48, -1.14,  0.26,  0.71, -0.53,  1.38, -0.66,  0.97, -0.28],
-    [ 0.16,  0.62, -0.85,  1.04, -0.11, -0.76,  0.89, -1.34,  0.43],
-    [-0.58,  1.11,  0.30, -0.69,  0.93, -0.37, -1.05,  0.57,  0.22],
-    [ 0.35, -0.99,  0.79,  0.18, -0.82,  1.20, -0.48,  0.61, -0.13]
-], dtype=torch.float)
-
-# Initializing the embedding layer with the matrix above.
-embedding_layer = nn.Embedding(num_embeddings = 8, embedding_dim = 9)
-embedding_layer.weight.data = embedding_weights
-
-# Example of above sequence input to embedding layer.
-input = torch.tensor([0,6,4])
-output = embedding_layer(input)
-
-torch.set_printoptions(precision=2)
-print(output)</code></pre>
-
-        <pre class="line-numbers item" style="font-size: 0.70em;"><code class="language-python"># Output
-tensor([[ 0.12, -0.76,  1.34,  0.58, -1.21,  0.44, -0.09,  0.72, -0.33],
-        [-0.58,  1.11,  0.30, -0.69,  0.93, -0.37, -1.05,  0.57,  0.22],
-        [ 0.48, -1.14,  0.26,  0.71, -0.53,  1.38, -0.66,  0.97, -0.28]],
-        grad_fn=&ltEmbeddingBackward0&gt)</code></pre>
-
-        <p class="item">
-            Here’s a quick recap. In order for us to pass in sentences  as sequences into our model, each word in the vocabulary is assigned a unique integer between 0 and the size of the vocabulary. The initial representation (also called the embedding) of the word \(i\) is the \(i\)’th row of the embedding table. The embedding layer takes a sequence of integers, and outputs a sequence of embeddings.</p>
-
-        <h2 class="item" id="section4">The Transformer Encoder</h2>
-
-        <p class="item"> 
-            The job of the transformer encoder is to accept as input the sequence of word embeddings produced by the embedding layer, and to give each embedding in the sequence a new, better representation. This new representation will depend not only on the embedding itself, but also on all other embeddings in the sequence.
-        </p>
-
-        <p class="item"> 
-            As described in the paper, the encoder consists of N identical layers, each of which
-            consists of 2 sublayers: the multi head attention layer, and a feedforward layer. 
-            In this section we will discuss both sublayers in detail.
-        </p>
-
-        <h3 class="item" id="section4-1">The Single Head Attention Layer</h3>
-
-        <p class="item"> 
-            Before talking about multi head attention, we must first understand single head attention. Thus we will first discuss what a single head attention layer looks like. The input to the single head attention layer is a tensor \(X \in \mathbb{R}^{T \times H}\), which represents a sequence of length \(T\) of word embeddings of size \(H\). The purpose of this layer is to map each word embedding \(X_i\) to a new representation \(Y_i\). The output of this layer is thus a tensor \(Y \in \mathbb{R}^{T \times H}\). We will  see that \(Y_i\) is a function of all the word embeddings in \(X\), and not just \(X_i\) alone. This is what allows the new representation of each word to factor in the "context" of the sentence that the word is in.
-        </p>
-
-        <p class="item">
-            The learnable parameters of this layer are tensors \(W^Q, W^K \in \mathbb{R}^{H \times D_k}, \text{ and } W^V \in \mathbb{R}^{H \times D_v}\). Here, \(D_k \text{ and } D_v\) are hyper-parameters to the layer, and notice that \(W^Q\) and \(W^K\) are the same shape. For this section we'll let \(D_v = H\), and the reason for this will become clear in the section on multihead attention.
-        </p>
-
-        <p class="item">
-            Upon recieving the input \(X\), the single head attention layer computes three new matrices:
-            \[\begin{equation}
-              \begin{aligned}
-              Q &= X \times W^Q,\\
-              K &= X \times W^K, \text{ and }\\
-              V &= X \times W^V.
-              \end{aligned}
-            \end{equation}\]
-            Notice that \(Q,\; K, \text{ and } V\) each have the same number of rows as \(X\). You can think of each \(X_i\) as now having three new representations \(Q_i,\; K_i, \text{ and } V_i\), which are commonly known as the query, key, and value of \(X_i\). A visual depiction is provided below. 
-        </p>
-
-        <img class="item" src="images/createqkv.png" alt="a visualization of 
-        creating queries, keys and values">
-
-        <p class="item">
-            The new feature representation of \(X_i\) (aka \(Y_i\)) is going to be a weighted sum of the rows in \(V,\) and the number \(Q_i \cdot K_j\) is used to determine the contribution of row \(V_j\) to this sum. This number is the query of \(X_i\) dotted with the key of \(X_j\). Let's look at how this happens.
-        </p>
-
-        <p class="item">
-            For each embedding \(X_i\) we define the vector \(E_i \in \mathbb{R} ^ T\), where \(E_{ij} = Q_i \cdot K_j\). Next we define \(A_i = \text{softmax}(E_i/D_k)\), where the division by \(D_K\) is element-wise. Finally, we let \[ Y_i = \sum_{j=1}^{T} a_{ij} \cdot V_j,\]
-        </p>
-
-        <p class="item"> 
-            where \(a_{ij}\) is the \(j\)th element of \(A_i\). 
-        </p>
-
-        <p class="item"> 
-            To recap, for each word embedding \(X_i\) we create a corresponding vector of weights \(A_i\), and then the rows of \(V\) are summed up according to these weights. The resulting sum is \(Y_i\), which is the new feature representation of \(X_i\). The weight assigned to \(V_j\) in this sum is determined by the dot product between the query of \(X_i\) and the key of \(X_j\) (though not exactly, because the weights are also then adjusted by the softmax). 
-        </p>
+                    <p class="item"> 
+                        To recap, for each word embedding \(X_i\) we create a corresponding vector of weights \(A_i\), and then the rows of \(V\) are summed up according to these weights. The resulting sum is \(Y_i\), which is the new feature representation of \(X_i\). The weight assigned to \(V_j\) in this sum is determined by the dot product between the query of \(X_i\) and the key of \(X_j\) (though not exactly, because the weights are also then adjusted by the softmax). 
+                    </p>
 
 
-        <p class="item">
-            I showed you how the new representation of one element in the sequence is obtained, but in practice matrix multiplication is used to compute all of them at once. First, a single matrix multiplication + softmax yields the weight vectors: 
-        </p>
+                    <p class="item">
+                        I showed you how the new representation of one element in the sequence is obtained, but in practice matrix multiplication is used to compute all of them at once. First, a single matrix multiplication + softmax yields the weight vectors: 
+                    </p>
 
-        <img class="item" src="images/prenormalized_weights.png" alt="a visualization of 
-        creating queries, keys and values">
+                    <img class="image-placeholder" src="images/prenormalized_weights.png" alt="a visualization of 
+                    creating queries, keys and values">
 
-        <p class="item">
-            We are using the fact that matrix multiplication computes the dot products between the rows of \(Q\) and colums of \(K^T\), which is exactly what we want. After letting \(A = \text{softmax}(E/D_k, \text{dim}=1)\), all of the weighted summations are computed 
-        </p>
+                    <p class="item">
+                        We are using the fact that matrix multiplication computes the dot products between the rows of \(Q\) and colums of \(K^T\), which is exactly what we want. After letting \(A = \text{softmax}(E/D_k, \text{dim}=1)\), all of the weighted summations are computed 
+                    </p>
 
-        <img class="item" src="images/sum_values.png" alt="a visualization of 
-        creating queries, keys and values">
+                    <img class="image-placeholder" src="images/sum_values.png" alt="a visualization of 
+                    creating queries, keys and values">
 
-        <h3 class="item" id="section4-2">The Multi Head Attention Layer</h3>
+                </section>
 
-        <p class="item">
-            A multihead attention layer with \(N\) heads is comprised of \(N\) independent single head attention layers. Like before, the input is a tensor \(X \in \mathbb{R}^{T \times H}\), which is passed through each single head attention layer independently. In this way, the embedding \(X_i\) receives \(N\) new representations \(Y_i^1,Y_i^2,\ldots,Y_i^N\). These representations are then concatenated, and the resulting vector has length \(N \times D_v\). Finally, this vector is passed through a linear layer to be projected back to the original size of \(X_i\), yielding \(Y_i\). 
-        </p>
-
-        <p class="item">
-            Multihead attention can be implemented using some clever tensor multiplication, which greatly simplifies the code and computations. This section will require a strong understanding of tensors, and may take some time to digest. 
-        </p>
-
-        <p class="item">
-            The learnable parameters of this layer are tensors \(W^Q, W^K \in \mathbb{R}^{H \times (D_k \times N)},\) \(W^V \in \mathbb{R}^{H \times (D_v \times N)} \) and \(W^O \in \mathbb{R}^{(D_v \times N)\times H }\). Observe that \(W^Q, W^K\) and \(W^V\) are like the tensors in single head attention, except that they have \(N\) times the number of columns. These are present in the constructor of the layer:
-        </p>
-        <pre class="line-numbers item" style="font-size: 0.70em;"><code class="language-python"># Code
+                <section id="multi-head-attention">
+                    <h3>The Multi Head Attention Layer</h3>
+                    <p class="item">
+                        A multihead attention layer with \(N\) heads is comprised of \(N\) independent single head attention layers. Like before, the input is a tensor \(X \in \mathbb{R}^{T \times H}\), which is passed through each single head attention layer independently. In this way, the embedding \(X_i\) receives \(N\) new representations \(Y_i^1,Y_i^2,\ldots,Y_i^N\). These representations are then concatenated, and the resulting vector has length \(N \times D_v\). Finally, this vector is passed through a linear layer to be projected back to the original size of \(X_i\), yielding \(Y_i\). 
+                    </p>
+            
+                    <p class="item">
+                        Multihead attention can be implemented using some clever tensor multiplication, which greatly simplifies the code and computations. This section will require a strong understanding of tensors, and may take some time to digest. 
+                    </p>
+            
+                    <p class="item">
+                        The learnable parameters of this layer are tensors \(W^Q, W^K \in \mathbb{R}^{H \times (D_k \times N)},\) \(W^V \in \mathbb{R}^{H \times (D_v \times N)} \) and \(W^O \in \mathbb{R}^{(D_v \times N)\times H }\). Observe that \(W^Q, W^K\) and \(W^V\) are like the tensors in single head attention, except that they have \(N\) times the number of columns. These are present in the constructor of the layer:
+                    </p>
+                    <pre class="line-numbers item" style="font-size: 0.70em;"><code class="language-python"># Code
 class MultiHeadAttention(nn.Module):
     def __init__(self, num_heads, hidden_size, key_size, value_size):
         super().__init__()
@@ -278,34 +285,34 @@ class MultiHeadAttention(nn.Module):
         Y = unslice_vertically(Z) @ self.W_O
 
         return Y</code></pre>
-
-        <p class="item">
-            Now we'll shift our attention to the forward method of this layer. The queries, keys, and values of all \(N\) attention heads are captured in the tensors \(Q\), \(K\), and \(V\), which looks similar to the step in single head attention:
-        </p>            
-        <p class="item">
-            \[\begin{equation}
-            \begin{aligned}
-            Q &= X \times W^Q,\\
-            K &= X \times W^K, \text{ and }\\
-            V &= X \times W^V.
-            \end{aligned}
-          \end{equation}\]
-        </p>
-
-        <p class="item">
-            The first \(D_k\) columns of \(Q\) and \(K\) correspond to the first attention head, the next \(D_k\) columns to the second, and so on. The function slice_vertically() is used to chop up \(Q\) and \(K\) every \(D_k\) columns. The same occurs for the values, except every \(D_v\) columns instead. Lines 24 and 26 then compute the single head attentions. The function unslice_vertically() concatenates the resulting attention heads, which are then multiplied by \(W^O\). 
-        </p>
-        <p class="item">
-            Below is an example visualization of this process, which uses 4 attention heads, and where \(D_v\) just happens to be equal to \(D_k\) so that the diagram is nicer. 
-        </p>
-
-        <img class="item" src="images/multihead_attention.png" alt="a visualization of 
-        multi head attention">
-
-        <p class="item">
-            The code for the functions used in the forward method is shown below:
-        </p>
-        <pre class="line-numbers item" style="font-size: 0.70em;"><code class="language-python"># Code
+            
+                    <p class="item">
+                        Now we'll shift our attention to the forward method of this layer. The queries, keys, and values of all \(N\) attention heads are captured in the tensors \(Q\), \(K\), and \(V\), which looks similar to the step in single head attention:
+                    </p>            
+                    <p class="item">
+                        \[\begin{equation}
+                        \begin{aligned}
+                        Q &= X \times W^Q,\\
+                        K &= X \times W^K, \text{ and }\\
+                        V &= X \times W^V.
+                        \end{aligned}
+                      \end{equation}\]
+                    </p>
+            
+                    <p class="item">
+                        The first \(D_k\) columns of \(Q\) and \(K\) correspond to the first attention head, the next \(D_k\) columns to the second, and so on. The function slice_vertically() is used to chop up \(Q\) and \(K\) every \(D_k\) columns. The same occurs for the values, except every \(D_v\) columns instead. Lines 24 and 26 then compute the single head attentions. The function unslice_vertically() concatenates the resulting attention heads, which are then multiplied by \(W^O\). 
+                    </p>
+                    <p class="item">
+                        Below is an example visualization of this process, which uses 4 attention heads, and where \(D_v\) just happens to be equal to \(D_k\) so that the diagram is nicer. 
+                    </p>
+            
+                    <img class="image-placeholder" src="images/multihead_attention.png" alt="a visualization of 
+                    multi head attention">
+            
+                    <p class="item">
+                        The code for the functions used in the forward method is shown below:
+                    </p>
+                    <pre class="line-numbers item" style="font-size: 0.70em;"><code class="language-python"># Code
 """
 Desciption:
 
@@ -370,15 +377,15 @@ Output:
 """
 def unslice_vertically(X):
     return X.transpose(-2, -3).flatten(-2, -1)</code></pre>
+                </section>
 
-
-        <h3 class="item" id="section4-3">The Full Encoder</h3>
-
-        <p class="item">
-            With our multihead attention layer done, it is straightforward to implement the encoder. As in the paper, the encoder is comprised of a stack of identical layers, and each layer consists of two sublayers. The first sublayer contains the multihead attention, and the second sublayer contains a feedforward network. The sequence is passed into the feedforward network one input at a time. Both sublayers employ dropout, a residual connection, and layer normalization, which are techniques used to improve training stability. Below is the code for both sublayers, as well as the encoder layer which contains them.
-        </p>
-
-        <pre class="line-numbers item" style="font-size: 0.70em;"><code class="language-python"># Code
+                <section id="full-encoder">
+                    <h3>Full Encoder</h3>
+                    <p class="item">
+                        With our multihead attention layer done, it is straightforward to implement the encoder. As in the paper, the encoder is comprised of a stack of identical layers, and each layer consists of two sublayers. The first sublayer contains the multihead attention, and the second sublayer contains a feedforward network. The sequence is passed into the feedforward network one input at a time. Both sublayers employ dropout, a residual connection, and layer normalization, which are techniques used to improve training stability. Below is the code for both sublayers, as well as the encoder layer which contains them.
+                    </p>
+            
+                    <pre class="line-numbers item" style="font-size: 0.70em;"><code class="language-python"># Code
 class AttentionSubLayer(nn.Module):
     def __init__(self, num_heads, hidden_size, key_size, value_size, dropout):
         super().__init__()
@@ -397,8 +404,8 @@ class FeedForwardSubLayer(nn.Module):
         super().__init__()
         # The feedforward network is a two layer mlp with a relu activation in between.
         self.feedforward = nn.Sequential(nn.Linear(hidden_size, feedforward_size),
-                                               nn.ReLU(),
-                                               nn.Linear(feedforward_size, hidden_size))
+                                                nn.ReLU(),
+                                                nn.Linear(feedforward_size, hidden_size))
         self.dropout = nn.Dropout(dropout)
         self.layernorm = nn.LayerNorm(hidden_size)
 
@@ -416,29 +423,29 @@ class EncoderLayer(nn.Module):
     def forward(self, X):
         
         return self.feedforward_sublayer(self.multihead_attention_sublayer(X, X))</code></pre>
-
-        <p class="item">
-            The full encoder architecture consists of the embedding layer, positional encodings, and the stack of encoder layers. It is here that we discuss positional encodings. If you look closely, the output feature representation of any element in the input sequence does not actually change if you re-order the sequence. Try and see for yourself: follow the computations done for one element in the sequence, particularly through the attention layer. Did its position in the sequence get factored in? 
-        </p>
-        <p class="item">
-            This is a problem, because the words in the sentences 
-        </p>
-        <ol class="item">
-            <li>I like reading classic novels,</li>
-            <li>like classic reading I novels,</li>            
-        </ol>
-        <p class="item">
-            get the same feature representations, regardless of which permutation is passed into the encoder. Only the order of the output sequence changes. 
-        </p>
-
-        <p class="item">
-            To solve this problem, transformer encoder learns exactly one positional encoding for each position between 0 and the context size. This technically puts a limit on the length of the input sequence, as it can now have at most context_size elements. These encodings are added position-wise, after the input sequence passes through the embedding layer. They are implemented using an embedding layer, where the \(i\)th row of the table is the encoding for the \(i\)th position. The model is free to learn these positional encodings during training time as it sees fit. 
-        </p>
-
-        <p class="item">
-            Finally, we have everything we need to implement the full encoder:
-        </p>
-        <pre class="line-numbers item" style="font-size: 0.70em;"><code class="language-python"># Code 
+            
+                    <p class="item">
+                        The full encoder architecture consists of the embedding layer, positional encodings, and the stack of encoder layers. It is here that we discuss positional encodings. If you look closely, the output feature representation of any element in the input sequence does not actually change if you re-order the sequence. Try and see for yourself: follow the computations done for one element in the sequence, particularly through the attention layer. Did its position in the sequence get factored in? 
+                    </p>
+                    <p class="item">
+                        This is a problem, because the words in the sentences 
+                    </p>
+                    <ol class="item">
+                        <li>I like reading classic novels,</li>
+                        <li>like classic reading I novels,</li>            
+                    </ol>
+                    <p class="item">
+                        get the same feature representations, regardless of which permutation is passed into the encoder. Only the order of the output sequence changes. 
+                    </p>
+            
+                    <p class="item">
+                        To solve this problem, transformer encoder learns exactly one positional encoding for each position between 0 and the context size. This technically puts a limit on the length of the input sequence, as it can now have at most context_size elements. These encodings are added position-wise, after the input sequence passes through the embedding layer. They are implemented using an embedding layer, where the \(i\)th row of the table is the encoding for the \(i\)th position. The model is free to learn these positional encodings during training time as it sees fit. 
+                    </p>
+            
+                    <p class="item">
+                        Finally, we have everything we need to implement the full encoder:
+                    </p>
+                    <pre class="line-numbers item" style="font-size: 0.70em;"><code class="language-python"># Code 
 class TransformerEncoder(nn.Module):
     def __init__(self, stack_size, vocab_size, context_size, num_heads, hidden_size, key_size, value_size, feedforward_size, dropout):
         super().__init__()
@@ -464,21 +471,44 @@ class TransformerEncoder(nn.Module):
             X = encoder_layer(X)
 
         return X</code></pre>
-        <p class="item">
-            There are a few things to note. You may have already seen this when learning about neural network implementations, but PyTorch modules and functions can often handle whole "batches" at a time. The shape of input tensors is split into two sections, as (batch_shape, input_shape). The input_shape is the actual shape of the input, which in our case is a \(T \times H\) tensor representing a sequence of \(T\) word embeddings. The computations of the model are carried out independently for each input in the "batch", which in our case has size \(N\). 
-        </p>
-        <p class="item">
-            Also, the transformer encoder has a "hidden_size", which is the size of the vector representation for each element in the input sequence. This is a hyper-parameter, and a larger hidden size increases the model capacity. Furthermore, since each encoder layer accepts and outputs the same hidden size, these layers are stackable. 
-        </p>
-        <h2 class="item" id="section5">Part 1 Conclusion</h2>
-        <p class="item">
-            In this part of the tutorial we saw the full implementation of the transformer encoder. We looked at how to represent sentences as sequences of ordinal encodings. Then, we saw how these sequences pass through the encoder's layers: word embeddings, positional encodings, and a stack of encoder layers. Part 2 of the tutorial introduces the transformer decoder, which uses the output of the encoder via cross-attention to produce a French translation. 
-        </p>
+                    <p class="item">
+                        There are a few things to note. You may have already seen this when learning about neural network implementations, but PyTorch modules and functions can often handle whole "batches" at a time. The shape of input tensors is split into two sections, as (batch_shape, input_shape). The input_shape is the actual shape of the input, which in our case is a \(T \times H\) tensor representing a sequence of \(T\) word embeddings. The computations of the model are carried out independently for each input in the "batch", which in our case has size \(N\). 
+                    </p>
+                    <p class="item">
+                        Also, the transformer encoder has a "hidden_size", which is the size of the vector representation for each element in the input sequence. This is a hyper-parameter, and a larger hidden size increases the model capacity. Furthermore, since each encoder layer accepts and outputs the same hidden size, these layers are stackable. 
+                    </p>
+                </section>
+            </section>
+
+            <section id="part-1-conclusion">
+                <h2 class="item">Part 1 Conclusion</h2>
+                <p class="item">
+                    In this part of the tutorial we saw the full implementation of the transformer encoder. We looked at how to represent sentences as sequences of ordinal encodings. Then, we saw how these sequences pass through the encoder's layers: word embeddings, positional encodings, and a stack of encoder layers. Part 2 of the tutorial introduces the transformer decoder, which uses the output of the encoder via cross-attention to produce a French translation. 
+                </p>
+            </section>
+        </main>
+
+        <footer class="tutorial-footer">
+            <p>© 2025 Michael Kosmider. All rights reserved.</p>
+            <p><a href="#">Back to Top</a></p>
+        </footer>
     </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script>
+        // Optional: Smooth scrolling for TOC links
+        document.querySelectorAll('.toc a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
 
 </body>
 </html>
