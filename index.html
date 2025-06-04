@@ -35,17 +35,18 @@
                     </ul>
                 </li>
                 <li><a href="#part-1-conclusion">Part 1 Conclusion</a></li>
+                <li><a href="part2.html">Go to Part 2</a></li>
             </ul>
         </nav>
 
         <main class="tutorial-content">
 
             <p class="item">
-                In this tutorial, you will learn both the theory and implementation of the transformer from the paper "Attention is All You Need". Then, you will see how to train such a model on machine translation from English to French. This tutorial assumes that the reader understands deep learning fundamentals and has experience training models in PyTorch. 
+                In this tutorial, you will learn both the theory and implementation of the transformer from the paper "Attention is All You Need". Then, you will see how to train such a model on machine translation from English to French, using the Multi30k dataset. This tutorial assumes that the reader understands deep learning fundamentals and has experience training models in PyTorch. 
             </p>
 
             <p class="item">
-                Part 1 will cover the implementation of the transformer encoder, which is the part of the model responsible for creating a rich representation of the input sentence. This representation is used by the transformer decoder when generating the French version of the sentence. Part 2 will discuss the decoder and model training. Finally, Part 3 discusses techniques and optimizations used in inference such as beam search and KV caching. Parts 2 and 3 are coming soon.
+                Part 1 will cover the implementation of the transformer encoder, which is the part of the model responsible for creating a rich representation of the English input sentence. This representation is used by the transformer decoder when generating the French version of the sentence. Part 2 discusses the decoder, data processing, model training, and inference using beam search and KV caching. 
             </p>
     
             <p class="item">
@@ -80,7 +81,7 @@
             <section id="definition">
                 <h2 class="item" id="section2">Definition</h2>
                 <p class="item">
-                    Before discussing the inner workings of transformers, we will formally define the problem. Our training data is a large set of pairs of sentences, where each pair contains the English  and French versions of a sentence. Our goal is to create and train a model that can take any English sentence as input and produce its French translation as output. This model is going to consist of an embedding layer, a transformer encoder, and a transformer decoder.
+                    Before discussing the inner workings of transformers, we will formally define the problem. Our training data is a large set of pairs of sentences, where each pair contains the English  and French versions of a sentence. Our goal is to create and train a model that can take any English sentence as input and produce its French translation as output. This model is going to consist of an embedding layer, a transformer encoder, a transformer decoder, and a linear projection layer.
                 </p>
         
                 <p class="item">
@@ -89,7 +90,7 @@
         
                 <ol class="item">
                     <li>Define the English vocabulary to be the set of all English words in the training data.</li>
-                    <li>Randomly assign to each word in the vocabulary a unique positive integer between 0 and the size of the vocabulary.</li>            
+                    <li>Arbitrarily assign to each word in the vocabulary a unique positive integer between 0 and the size of the vocabulary.</li>            
                 </ol>
         
                 <p class="item">
@@ -105,7 +106,7 @@
             <section id="word-embeddings">
                 <h2 class="item">Word Embeddings</h2>
                 <p class="item">
-                    The first layer in our model is the embedding layer. It has a learnable parameter called the “embedding table”, which is a two dimensional tensor. The number of columns in the table is a hyper-parameter \(H\), and we will set the number of rows to be the number of words in our English vocabulary. 
+                    The first layer in our model is the embedding layer. It has a learnable parameter called the “embedding table”, which is a two dimensional tensor. The number of columns in the table is a hyper-parameter \(H\), and we will set the number of rows to be the number of words in our English vocabulary. For our purposes, each row in the embedding table is the initial vector representation of some word in the English vocabulary.
                 </p>
         
                 <p class="item">
@@ -181,7 +182,7 @@
             <section id="transformer-encoder">
                 <h2>The Transformer Encoder</h2>
                 <p class="item"> 
-                    The job of the transformer encoder is to accept as input the sequence of word embeddings produced by the embedding layer, and to give each embedding in the sequence a new, better representation. This new representation will depend not only on the embedding itself, but also on all other embeddings in the sequence.
+                    The job of the transformer encoder is to accept as input the sequence of word embeddings produced by the embedding layer, and to give each embedding in the sequence a new, enhanced representation. This new representation will depend not only on the embedding itself, but also on all other embeddings in the sequence.
                 </p>
         
                 <p class="item"> 
@@ -240,7 +241,7 @@
                     creating queries, keys and values">
 
                     <p class="item">
-                        We are using the fact that matrix multiplication computes the dot products between the rows of \(Q\) and colums of \(K^T\), which is exactly what we want. After letting \(A = \text{softmax}(E/D_k, \text{dim}=1)\), all of the weighted summations are computed 
+                        We are using the fact that matrix multiplication computes the dot products between the rows of \(Q\) and colums of \(K^T\), which is exactly what we want. After letting \(A = \text{softmax}(E/\sqrt{D_k}, \text{dim}=1)\), all of the weighted summations are computed 
                     </p>
 
                     <img class="image-placeholder" src="images/sum_values.png" alt="a visualization of 
@@ -400,7 +401,7 @@ class AttentionSubLayer(nn.Module):
         self.dropout = nn.Dropout(dropout)
         self.layernorm = nn.LayerNorm(hidden_size)
 
-    # For self attention, X_Q and X_KV are the same. For cross attention, X_KV comes from the reference sequence.
+    # For self attention, X_Q and X_KV are the same. For cross attention, X_KV comes from the source sequence.
     def forward(self, X_Q, X_KV):
         
         return self.layernorm(self.dropout(self.multihead_attention(X_Q, X_KV)) + X_Q)
