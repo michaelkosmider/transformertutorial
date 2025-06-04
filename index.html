@@ -81,7 +81,7 @@
             <section id="definition">
                 <h2 class="item" id="section2">Definition</h2>
                 <p class="item">
-                    Before discussing the inner workings of transformers, we will formally define the problem. Our training data is a large set of pairs of sentences, where each pair contains the English  and French versions of a sentence. Our goal is to create and train a model that can take any English sentence as input and produce its French translation as output. This model is going to consist of an embedding layer, a transformer encoder, a transformer decoder, and a linear projection layer.
+                    Before discussing the inner workings of transformers, we will formally define the problem. Our training data is a large set of pairs of sentences, where each pair contains the English  and French versions of a sentence. Our goal is to create and train a model that can take any English sentence as input and produce its French translation as output. This model is going to consist of embedding and positional layers, a transformer encoder, a transformer decoder, and a linear projection layer.
                 </p>
         
                 <p class="item">
@@ -145,34 +145,34 @@
                 </p>
         
                 <pre class="line-numbers item" style="font-size: 0.70em;"><code class="language-python"># Code
-        # The matrix stored by the embedding layer.
-        embedding_weights = torch.tensor([
-            [ 0.12, -0.76,  1.34,  0.58, -1.21,  0.44, -0.09,  0.72, -0.33],
-            [-0.45,  1.05,  0.39, -0.97,  0.18, -1.56,  0.87,  0.23, -0.12],
-            [ 1.23, -0.64,  0.07,  0.92, -0.31,  0.51, -1.22,  0.84, -0.77],
-            [-0.19,  0.34,  0.88, -1.03,  1.15, -0.42,  0.65, -0.91,  0.00],
-            [ 0.48, -1.14,  0.26,  0.71, -0.53,  1.38, -0.66,  0.97, -0.28],
-            [ 0.16,  0.62, -0.85,  1.04, -0.11, -0.76,  0.89, -1.34,  0.43],
-            [-0.58,  1.11,  0.30, -0.69,  0.93, -0.37, -1.05,  0.57,  0.22],
-            [ 0.35, -0.99,  0.79,  0.18, -0.82,  1.20, -0.48,  0.61, -0.13]
-        ], dtype=torch.float)
-        
-        # Initializing the embedding layer with the matrix above.
-        embedding_layer = nn.Embedding(num_embeddings = 8, embedding_dim = 9)
-        embedding_layer.weight.data = embedding_weights
-        
-        # Example of above sequence input to embedding layer.
-        input = torch.tensor([0,6,4])
-        output = embedding_layer(input)
-        
-        torch.set_printoptions(precision=2)
-        print(output)</code></pre>
+# The matrix stored by the embedding layer.
+embedding_weights = torch.tensor([
+    [ 0.12, -0.76,  1.34,  0.58, -1.21,  0.44, -0.09,  0.72, -0.33],
+    [-0.45,  1.05,  0.39, -0.97,  0.18, -1.56,  0.87,  0.23, -0.12],
+    [ 1.23, -0.64,  0.07,  0.92, -0.31,  0.51, -1.22,  0.84, -0.77],
+    [-0.19,  0.34,  0.88, -1.03,  1.15, -0.42,  0.65, -0.91,  0.00],
+    [ 0.48, -1.14,  0.26,  0.71, -0.53,  1.38, -0.66,  0.97, -0.28],
+    [ 0.16,  0.62, -0.85,  1.04, -0.11, -0.76,  0.89, -1.34,  0.43],
+    [-0.58,  1.11,  0.30, -0.69,  0.93, -0.37, -1.05,  0.57,  0.22],
+    [ 0.35, -0.99,  0.79,  0.18, -0.82,  1.20, -0.48,  0.61, -0.13]
+], dtype=torch.float)
+
+# Initializing the embedding layer with the matrix above.
+embedding_layer = nn.Embedding(num_embeddings = 8, embedding_dim = 9)
+embedding_layer.weight.data = embedding_weights
+
+# Example of above sequence input to embedding layer.
+input = torch.tensor([0,6,4])
+output = embedding_layer(input)
+
+torch.set_printoptions(precision=2)
+print(output)</code></pre>
         
                 <pre class="line-numbers item" style="font-size: 0.70em;"><code class="language-python"># Output
-        tensor([[ 0.12, -0.76,  1.34,  0.58, -1.21,  0.44, -0.09,  0.72, -0.33],
-                [-0.58,  1.11,  0.30, -0.69,  0.93, -0.37, -1.05,  0.57,  0.22],
-                [ 0.48, -1.14,  0.26,  0.71, -0.53,  1.38, -0.66,  0.97, -0.28]],
-                grad_fn=&ltEmbeddingBackward0&gt)</code></pre>
+tensor([[ 0.12, -0.76,  1.34,  0.58, -1.21,  0.44, -0.09,  0.72, -0.33],
+        [-0.58,  1.11,  0.30, -0.69,  0.93, -0.37, -1.05,  0.57,  0.22],
+        [ 0.48, -1.14,  0.26,  0.71, -0.53,  1.38, -0.66,  0.97, -0.28]],
+        grad_fn=&ltEmbeddingBackward0&gt)</code></pre>
         
                 <p class="item">
                     Here’s a quick recap. In order for us to pass in sentences  as sequences into our model, each word in the vocabulary is assigned a unique integer between 0 and the size of the vocabulary. The initial representation (also called the embedding) of the word \(i\) is the \(i\)’th row of the embedding table. The embedding layer takes a sequence of integers, and outputs a sequence of embeddings.
@@ -221,7 +221,7 @@
                     </p>
 
                     <p class="item">
-                        For each embedding \(X_i\) we define the vector \(E_i \in \mathbb{R} ^ T\), where \(E_{ij} = Q_i \cdot K_j\). Next we define \(A_i = \text{softmax}(E_i/D_k)\), where the division by \(D_K\) is element-wise. Finally, we let \[ Y_i = \sum_{j=1}^{T} a_{ij} \cdot V_j,\]
+                        For each embedding \(X_i\) we define the vector \(E_i \in \mathbb{R} ^ T\), where \(E_{ij} = Q_i \cdot K_j\). Next we define \(A_i = \text{softmax}(E_i/\sqrt{D_k})\), where the division by \(\sqrt{D_k}\) is element-wise. Finally, we let \[ Y_i = \sum_{j=1}^{T} a_{ij} \cdot V_j,\]
                     </p>
 
                     <p class="item"> 
@@ -294,7 +294,7 @@ class MultiHeadAttention(nn.Module):
         return Y</code></pre>
             
                     <p class="item">
-                        Now we'll shift our attention to the forward method of this layer. The queries, keys, and values of all \(N\) attention heads are captured in the tensors \(Q\), \(K\), and \(V\), which looks similar to the step in single head attention:
+                        Now we'll shift our attention to the forward method of this layer. For now, assume that \(X_Q\) and \(X_{KV}\) are the same tensor (the reason for having two input tensors is explained in part 2). The queries, keys, and values of all \(N\) attention heads are captured in the tensors \(Q\), \(K\), and \(V\), which looks similar to the step in single head attention:
                     </p>            
                     <p class="item">
                         \[\begin{equation}
@@ -317,30 +317,40 @@ class MultiHeadAttention(nn.Module):
                     multi head attention">
             
                     <p class="item">
-                        The code for the functions used in the forward method is shown below:
+                        The code for the functions used in the forward method is shown below. For now you may ignore the masking in the attention computation, as this will be explained in part 2 of the tutorial.
                     </p>
                     <pre class="line-numbers item" style="font-size: 0.70em;"><code class="language-python"># Code
 """
 Desciption:
 
 This function computes the attention matrix between queries Q and keys K, which have shapes 
-(T1, D_K) and (T2, D_K) respectively. Here, T1 represents the length of the input sequence 
-used to create Q, and D_K is the key size. Furthermore, any batch size (d0, d1, ... , dn) is 
-supported. A typical batch size would be (N, num_heads), where N is the input batch size and 
-num_heads is the number of attention heads in the multi head attention layer. Make sure that
-Q and K have the same batch size, so that there is exactly one key matrix per query matrix.
+(T, D_K) and (S, D_K) respectively. Here, T is the length of the input sequence used to create
+Q, and S is the length of the source sequence producing K and V. Forthemore, D_K is the key 
+size. The attention computation is performed in batches of size N_batch, heads, which correspond 
+to the number of sequences in the batch, and the number of heads for each sequence.
 
 Input:
 
-Q - a tensor of shape (d0, d1, ... , dn, T1, D_K)
-K - a tensor of shape (d0, d1, ... , dn, T2, D_K)
+Q - a tensor of shape (N_batch, heads, T, D_K)
+K - a tensor of shape (N_batch, heads, S, D_K)
+causal_mask - a T by T boolean causal mask, where True means do not attend. 
+key_padding_mask - an N by S boolean mask, where True means do not attend. 
 
 Output:
 
-A - a tensor of shape (d0, d1, ... , dn, T1, T2)
+A - a tensor of shape (N_batch, heads, T, S)
 """
-def compute_attention_matrix(Q, K):
-    E = Q @ K.transpose(-1, -2) 
+
+def compute_attention_matrix(Q, K, causal_mask=None, key_padding_mask=None):
+
+    E = Q @ K.transpose(-1, -2)
+
+    if causal_mask is not None:
+        E.masked_fill_(causal_mask, -torch.inf)
+
+    if key_padding_mask is not None:
+        E.masked_fill_(key_padding_mask[:, None, None, :], -torch.inf)
+
     A = torch.softmax(E / (Q.shape[-1] ** 0.5), -1)
     return A
 
@@ -389,7 +399,7 @@ def unslice_vertically(X):
                 <section id="full-encoder">
                     <h3>Full Encoder</h3>
                     <p class="item">
-                        With our multihead attention layer done, it is straightforward to implement the encoder. As in the paper, the encoder is comprised of a stack of identical layers, and each layer consists of two sublayers. The first sublayer contains the multihead attention, and the second sublayer contains a feedforward network. The sequence is passed into the feedforward network one input at a time. Both sublayers employ dropout, a residual connection, and layer normalization, which are techniques used to improve training stability. Below is the code for both sublayers, as well as the encoder layer which contains them.
+                        With our multihead attention layer done, it is straightforward to implement the encoder. As in the paper, the encoder is comprised of a stack of identical layers, and each layer consists of two sublayers. The first sublayer contains the multihead attention, and the second sublayer contains a feedforward network. The sequence is passed into the feedforward network one input at a time. Both sublayers employ dropout, a residual connection, and layer normalization, which are techniques used to improve training stability. Below is the code for both sublayers.
                     </p>
             
                     <pre class="line-numbers item" style="font-size: 0.70em;"><code class="language-python"># Code
@@ -397,39 +407,52 @@ class AttentionSubLayer(nn.Module):
     def __init__(self, num_heads, hidden_size, key_size, value_size, dropout):
         super().__init__()
 
-        self.multihead_attention = MultiHeadAttention(num_heads, hidden_size, key_size, value_size)
+        self.multihead_attention = MultiHeadAttention(
+            num_heads, hidden_size, key_size, value_size
+        )
         self.dropout = nn.Dropout(dropout)
         self.layernorm = nn.LayerNorm(hidden_size)
 
-    # For self attention, X_Q and X_KV are the same. For cross attention, X_KV comes from the source sequence.
-    def forward(self, X_Q, X_KV):
-        
-        return self.layernorm(self.dropout(self.multihead_attention(X_Q, X_KV)) + X_Q)
-    
+    # For self attention, X_Q and X_KV are the same. For cross attention, X_KV comes from the reference sequence.
+    def forward(self, X_Q, X_KV, causal_mask=None, key_padding_mask=None):
+        return self.layernorm(
+            self.dropout(
+                self.multihead_attention(
+                    X_Q,
+                    X_KV,
+                    causal_mask=causal_mask,
+                    key_padding_mask=key_padding_mask,
+                )
+            )
+            + X_Q
+        )
+
+
 class FeedForwardSubLayer(nn.Module):
+    """The feedforward network is a two layer mlp with a relu activation in between.
+        Dropout applied to MLP output and residual connected added. Layer norm applied
+        before output.
+
+    Args:
+        hidden_size (int): Size of the hidden dimension.
+        feedforward_size (int): Size of the hidden layer of the MLP.
+        dropout (float): Dropout rate, which is applied after the MLP.
+    """
+
     def __init__(self, hidden_size, feedforward_size, dropout):
         super().__init__()
-        # The feedforward network is a two layer mlp with a relu activation in between.
-        self.feedforward = nn.Sequential(nn.Linear(hidden_size, feedforward_size),
-                                                nn.ReLU(),
-                                                nn.Linear(feedforward_size, hidden_size))
+
+        self.feedforward = nn.Sequential(
+            nn.Linear(hidden_size, feedforward_size),
+            nn.ReLU(),
+            nn.Linear(feedforward_size, hidden_size),
+        )
         self.dropout = nn.Dropout(dropout)
         self.layernorm = nn.LayerNorm(hidden_size)
 
     def forward(self, X):
-        
         return self.layernorm(self.dropout(self.feedforward(X)) + X)
-    
-class EncoderLayer(nn.Module):
-    def __init__(self, num_heads, hidden_size, key_size, value_size, feedforward_size, dropout):
-        super().__init__()
-
-        self.multihead_attention_sublayer = AttentionSubLayer(num_heads, hidden_size, key_size, value_size, dropout)
-        self.feedforward_sublayer = FeedForwardSubLayer(hidden_size, feedforward_size, dropout)
-
-    def forward(self, X):
-        
-        return self.feedforward_sublayer(self.multihead_attention_sublayer(X, X))</code></pre>
+</code></pre>
             
                     <p class="item">
                         The full encoder architecture consists of the embedding layer, positional encodings, and the stack of encoder layers. It is here that we discuss positional encodings. If you look closely, the output feature representation of any element in the input sequence does not actually change if you re-order the sequence. Try and see for yourself: follow the computations done for one element in the sequence, particularly through the attention layer. Did its position in the sequence get factored in? 
@@ -453,29 +476,70 @@ class EncoderLayer(nn.Module):
                         Finally, we have everything we need to implement the full encoder:
                     </p>
                     <pre class="line-numbers item" style="font-size: 0.70em;"><code class="language-python"># Code 
+class EncoderLayer(nn.Module):
+
+    def __init__(
+        self, num_heads, hidden_size, key_size, value_size, feedforward_size, dropout
+    ):
+        super().__init__()
+
+        self.multihead_attention_sublayer = AttentionSubLayer(
+            num_heads, hidden_size, key_size, value_size, dropout
+        )
+
+        self.feedforward_sublayer = FeedForwardSubLayer(
+            hidden_size, feedforward_size, dropout
+        )
+
+    def forward(self, X, key_padding_mask):
+
+        X = self.multihead_attention_sublayer(X, X, key_padding_mask=key_padding_mask)
+
+        X = self.feedforward_sublayer(X)
+
+        return X
+
+
 class TransformerEncoder(nn.Module):
-    def __init__(self, stack_size, vocab_size, context_size, num_heads, hidden_size, key_size, value_size, feedforward_size, dropout):
+
+    def __init__(
+        self,
+        vocab_size,
+        context_size,
+        stack_size=6,
+        num_heads=8,
+        hidden_size=512,
+        key_size=64,
+        value_size=64,
+        feedforward_size=2048,
+        dropout=0.1,
+    ):
         super().__init__()
 
         self.embeddings = nn.Embedding(vocab_size, hidden_size)
         self.positional_encodings = nn.Embedding(context_size, hidden_size)
-        self.encoder_stack = nn.ModuleList([EncoderLayer(num_heads, hidden_size, key_size, value_size, feedforward_size, dropout) for _ in range(stack_size)])
+        self.encoder_stack = nn.ModuleList(
+            [
+                EncoderLayer(
+                    num_heads,
+                    hidden_size,
+                    key_size,
+                    value_size,
+                    feedforward_size,
+                    dropout,
+                )
+                for _ in range(stack_size)
+            ]
+        )
 
-    '''    
-    Description: Applies the transformer encoder to the input.
-    Below, N is batch size, T is sequence length and H is the hidden dimension.
+    def forward(self, X, key_padding_mask):
 
-    inputs: 
-        X - a tensor of shape N x T 
-        
-    outputs:
-        returns a tensor of shape N x T x H
-    '''
-    def forward(self, X):
-        X = self.embeddings(X) + self.positional_encodings(torch.arange(X.shape[1], device=X.device))
+        X = self.embeddings(X) + self.positional_encodings(
+            torch.arange(X.shape[1], device=X.device)
+        )
 
         for encoder_layer in self.encoder_stack:
-            X = encoder_layer(X)
+            X = encoder_layer(X, key_padding_mask)
 
         return X</code></pre>
                     <p class="item">
