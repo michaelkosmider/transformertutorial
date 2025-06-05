@@ -50,11 +50,11 @@
                 <h2>Revisiting Attention: Cross Attention and Masking</h2>
 
                 <p>
-                    Let's recall single head attention. Queries and keys are used to create an attention weight matrix, which is then used to perform a weighted sum of the values. The weight matrix is obtained by applying division by \(\sqrt{D_k}\) followed by softmax to the raw attention scores given by \(Q \times K^T\). 
+                    Let's recall single head attention. Raw attention scores are given by the queries and keys through \(Q \times K^T\). The weight matrix is obtained by dividing the raw scores by \(\sqrt{D_k}\) followed by softmax.
                 </p>
 
                 <p>
-                    The thing is, the keys and values can originate from a different sequence than the one producing the queries. This is the concept known as cross attention. For terminology, we call the sequence producing the queries the "target sequence", and the one producing keys and values the "source sequence". Cross attention allows tokens from the target sequence to be placed in the context of the source sequence. In our case, French tokens in the context of English tokens. Below is a visualization of the raw scores calculation. 
+                    The thing is, the keys and values can originate from a different sequence than the one producing the queries. This is the concept known as cross attention. For terminology, we call the sequence producing the queries the "target sequence", and the one producing keys and values the "source sequence". Cross attention allows tokens from the target sequence to be placed in the context of the source sequence. In our case, French tokens in the context of English tokens. Below is a visualization of the raw scores calculation, supposing the target and source sequences are of lengths \(T\) and \(S\), respectively.
                 </p>
 
                 <img class="image-placeholder" src="images/cross_raw_scores.png" alt="a visualization of cross raw scores.">      
@@ -64,7 +64,7 @@
                 </p>
 
                 <p>
-                    The weight matrix can be further customized via a concept known as masking. In essence, if you don't want the \(i\)'th token from the target sequence to attend to the j'th token from the source sequence, then the \(E_{ij}\) entry of the raw weight matrix must be replaced by negative infinity. That way, softmax will replace it with \(0\) when calculating the final weight matrix. There are two main reasons why you'd want to do this. The first is that padding tokens from the source sequence have no meaning, and we don't want their values to be part of the summation. Secondly, in the decoder's self-attention, where the source and target sequences are the same sequence, we will apply a "causal mask". Token \(i\)'s representation will be a sum of only the first \(i\) values. We never want the \(i\)'th French token's representation factoring in future French tokens. The reason for this will become clear in the section on model training.
+                    The weight matrix can be further customized via a concept known as masking. In essence, if you don't want the \(i\)'th token from the target sequence to attend to the j'th token from the source sequence, then the \(E_{ij}\) entry of the raw weight matrix must be replaced by negative infinity. That way, softmax will replace it with \(0\) when calculating the final weight matrix, and the \(j\)'th value will have no contribution to the representation of token \(i\). There are two main reasons why you'd want to do this. The first is that padding tokens, whether from the source or target sequence, have no meaning, and we don't want their values to be part of the summation. Secondly, in the decoder's self-attention, where the source and target sequences are the same sequence, we will apply a "causal mask". Token \(i\)'s representation will be a sum of only the first \(i\) values. We never want the \(i\)'th French token's representation factoring in future French tokens. The reason for this will become clear in the training section.
                 </p>
 
                 <p>
@@ -299,7 +299,7 @@ data['train'][0] # Example
                         With the data tokenized and loaded into ram, we need to create the vocabulary. As discussed before, we will have both an English and a French vocabulary. These will be instances of a Vocab class, implemented below. A Vocab maintains two dictionaries: one which maps words to integers, and the other which maps integers back to words. Words can be added to the vocabulary by passing in tokenized sentences, and each new word is mapped to the current number of words in the vocabulary. Each vocabulary is constructed by adding in every sentence of its respective language from the training split. 
                     </p>
                     <p>
-                        You'll also notice that the vocabulary comes pre-built with four special tokens. The purpose of these tokens will become clear in the section about model training. 
+                        You'll also notice that the vocabulary comes pre-built with four special tokens. All inputs will be prepended with the SOS token, and have the EOS token appended. At inference time, unmapped words will be treated as the UNK token. Finally, the purpose of the PAD token is to extend each sequence in a batch to be the size of the longest sentence in the batch. 
                     </p>
                     <pre class="line-numbers item" style="font-size: 0.70em;"><code class="language-python">PAD_TOKEN, PAD_IDX = "<PAD>", 0
 SOS_TOKEN, SOS_IDX = "<SOS>", 1
@@ -524,19 +524,20 @@ torch.save(
                 </p>
 
                 <p>
-                    In comes K-beam search, which works as follows. It first samples K tokens without replacement from the SOS token's distribution. These will be the beginnings of K French sentences. Then, beam search looks at each possible continuation of each sentence, which is a pool of \(K \times \text{vocab_size}\) possibilities. From those, it selects the top K most likely ones, and repeats. It's possible that not every sentence survives this step, because one sentence could have two continuations in the top \(K\). This is still a greedy algorithm, but it considers more possibilities than the first option discussed.
+                    In comes K-beam search, which works as follows. It first samples K tokens without replacement from the SOS token's distribution. These will be the beginnings of K French sentences (beams). From here, beam search enters a loop. For each iteration, it looks at each possible continuation of each beam, which is a pool of \(K \times \text{vocab_size}\) possibilities. From those, it selects the top K most likely ones, and repeats. It's possible that not every beam survives this step, because one beam could have two continuations in the top \(K\), thus pushing some other less likely beam out. This is still a greedy algorithm, but it considers more possibilities than the first option discussed.
                 </p>
 
                 <p>
-                    In terms of implementation, these K French sentences are instantiated in a pre-filled \(K \times \text{max_size}\) tensor, with the SOS token followed by PAD. This tensor is the beams tensor. This beams tensor is passed through the decoder, and \(K\) tokens are sampled from the distribution of the SOS token. These tokens are added to the beams in-place, in the second position of the sequence dimension, following the SOS token. 
+                    We'll keep a rolling probability for each beam in a tensor of size \(K\) named "scores". The probability score of each beam will be the sum of the log probabilities of each token in the beam, as this it more numerically stable than the product of the probabilities of each token, and produces the same solution.
                 </p>
 
                 <p>
-                    For each beam, we track its current log probability in a tensor called "scores". Initially, these are just the log probabilites of the first \(K\) tokens. We use the sum of log probabilities of each token, instead of product of probabilities, in order to track the probability of each beam. The outcome is the same, but this is a more numerically stable approach.
+                    In terms of implementation, these K French sentences are instantiated in a pre-filled \(K \times \text{max_size}\) tensor, with the SOS token followed by PAD. This tensor is the beams tensor. The first step passes a single SOS token through the decoder, and \(K\) tokens are sampled from the distribution of the SOS token. These tokens are added to the start of the beams in-place, in the second position of the sequence dimension, following the SOS token. 
                 </p>
 
+
                 <p>
-                    From here, beam search is deterministic. The beams are again passed through the decoder, and then each beam has vocab_size possible continuations according to the distributions of the last \(K\) token generated in that beam. The log probability of every possible continuation is calculated and these log probabilities are all stored in a \(K \times \text{vocab_size}\) tensor. This tensor is then broadcasted with the scores tensor,  yielding a \(K \times \text{vocab_size}\) tensor that has the sum-of-logs probability of each candidate sentence. The top \(K\) of those are chosen, the beams are re-selected and the \(K\) new tokens are added in place. This iterative process repeats until the beams tensor is filled, and the most likely beam is returned. Have a look at the code for beam search, which is a method added to the class of the full transformer:
+                    From here, beam search is deterministic. The beams are again passed through the decoder, and then each beam has vocab_size possible continuations according to the distributions of the last token generated in that beam. The log probability of every possible continuation is calculated and these log probabilities are all stored in a \(K \times \text{vocab_size}\) tensor. This tensor is then broadcasted with the scores tensor,  yielding a \(K \times \text{vocab_size}\) tensor that has the sum-of-logs probability of each candidate sentence. The top \(K\) of those are chosen, the beams are re-selected and the \(K\) new tokens are added in place for the selected beams. This iterative process repeats until the beams tensor is filled, and the most likely beam is returned. Have a look at the code for beam search, which is a method added to the class of the full transformer:
                 </p>
 
                 <pre class="line-numbers item" style="font-size: 0.70em;"><code class="language-python">def generate(
@@ -640,11 +641,11 @@ French sentence ground truth: un homme prépare de la nourriture sur un barbecue
 Model output: un homme prépare de la nourriture sur un barbecue dehors .</code></pre> 
 
                 <p>
-                    You may have noticed something is inefficient about this beam search implementation as described so far. In each iteration, the beams tensor is passed in, and only the distribution of the last token is used in order to select the next beams/tokens. In fact, the output at each position before the "front" token of the beams is the exact between iterations. That makes sense because appending tokens does not affect the represetation of past tokens, as each token only attends to past tokens due to the causal mask. This is a problem addressed by a concept known as CV caching, described next. 
+                    You may have noticed something is inefficient about this beam search implementation as described so far. In each iteration, the beams tensor is passed in, and only the distribution of the last token is used in order to select the next beams/tokens. In fact, the output at each position before the "front" token of the beams never changes between iterations. That makes sense because appending tokens does not affect the represetation of past tokens, as each token only attends to past tokens due to the causal mask. This is a problem addressed by a concept known as KV caching, described next. 
                 </p>
 
                 <p>
-                    As a side note, you'll notice that the beams tensor looks like a batch \(K\) of sequences, and yet only one sequence (the source sequence) is passed into the encoder. That is fine, as it will be broadcasted inside the decoder's forward method, in particular in the first sublayer.
+                    As a side note, you'll notice that the beams tensor looks like a batch \(K\) of sequences, and yet only one sequence (the source sequence) is passed into the encoder. That is fine, as the output of the encoder will be broadcasted inside the decoder's forward method, in particular in the first sublayer.
                 </p>
             </section>
 
@@ -657,7 +658,7 @@ Model output: un homme prépare de la nourriture sur un barbecue dehors .</code>
 
             <section id="conclusion">
                 <h2>Conclusion</h2>
-                This concludes my tutorial on transformer implementation and machine translation! In part 1, we studied the encoder by diving into embeddings, self attention, and the encoder architecture. In part 2, we re-visited attention by introducing cross attention and masking, and finished the decoder and full model implemtnation. Then, we saw how to process the dataset by using spacy tokenization and a vocabulary class, trained the model using the Adam optimizer, and then saw beam search in action. Finally, we optimized beam search via KV-caching. I hope you found this tutorial useful :)
+                This concludes my tutorial on transformer implementation and machine translation! In part 1, we studied the encoder by diving into embeddings, self attention, and the encoder architecture. In part 2, we re-visited attention by introducing cross attention and masking, and finished the decoder and full model implementation. Then, we saw how to process the dataset by using spacy tokenization and a vocabulary class, trained the model using the Adam optimizer, and then saw beam search in action. Finally, we optimized beam search via KV-caching. I hope you found this tutorial useful :)
             </section>
         </main>
 

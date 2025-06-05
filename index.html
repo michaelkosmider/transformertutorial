@@ -543,11 +543,9 @@ class TransformerEncoder(nn.Module):
 
         return X</code></pre>
                     <p class="item">
-                        There are a few things to note. You may have already seen this when learning about neural network implementations, but PyTorch modules and functions can often handle whole "batches" at a time. The shape of input tensors is split into two sections, as (batch_shape, input_shape). The input_shape is the actual shape of the input, which in our case is a \(T \times H\) tensor representing a sequence of \(T\) word embeddings. The computations of the model are carried out independently for each input in the "batch", which in our case has size \(N\). 
+                        There are a few things to note. You may have already seen this when learning about neural network implementations, but PyTorch modules and functions can often handle whole "batches" at a time. The shape of input tensors is split into two sections, as (batch_shape, input_shape). The input_shape is the actual shape of the input, which in our case is a \(T \times H\) tensor representing a sequence of \(T\) word embeddings. The computations of the model are carried out independently for each input in the "batch", which in our case has size \(N\). Tensors of size \(N \times T \times H\) are thus passed into the encoder. One issue then, is that not all sentences are the same length. Therefore, batches are constructed with padding tokens at the end of each sequence, so that all sequences be the same length.
                     </p>
-                    <p class="item">
-                        Also, the transformer encoder has a "hidden_size", which is the size of the vector representation for each element in the input sequence. This is a hyper-parameter, and a larger hidden size increases the model capacity. Furthermore, since each encoder layer accepts and outputs the same hidden size, these layers are stackable. 
-                    </p>
+
                 </section>
             </section>
 
